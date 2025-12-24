@@ -13,15 +13,15 @@ is_enabled() {
 }
 
 # Find config file
-if [[ -n ${CONFIG_FILE:-} ]]; then
-    mapfile -t candidates < <(find /config -name "$CONFIG_FILE" 2>/dev/null | sort)
+if [[ -n ${VPN_CONFIG_FILE:-} ]]; then
+    mapfile -t candidates < <(find /data/vpn -name "$VPN_CONFIG_FILE" 2>/dev/null | sort)
 else
-    mapfile -t candidates < <(find /config \( -name '*.ovpn' -o -name '*.conf' \) 2>/dev/null | sort)
+    mapfile -t candidates < <(find /data/vpn \( -name '*.ovpn' -o -name '*.conf' \) 2>/dev/null | sort)
 fi
 
 if [[ ${#candidates[@]} -eq 0 ]]; then
-    echo "ERROR: No OpenVPN configuration file found in /config" >&2
-    echo "   Expected: *.ovpn or *.conf (or set CONFIG_FILE env var)" >&2
+    echo "ERROR: No OpenVPN configuration file found in /data/vpn" >&2
+    echo "   Expected: *.ovpn or *.conf (or set VPN_CONFIG_FILE env var)" >&2
     exit 1
 fi
 
@@ -37,12 +37,18 @@ fi
 echo "Using OpenVPN configuration: $config_file"
 
 openvpn_args=(
+    "--down-pre"
+    "--script-security" "2"
     "--config" "$config_file"
-    "--cd" "/config"
+    "--cd" "/data/vpn"
 )
 
+openvpn_args+=("--data-ciphers" "AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305:AES-256-CBC:AES-192-GCM:AES-128-CBC:AES-192-CBC")
+
+openvpn_args+=("--verb" "${VPN_LOG_LEVEL:-3}")
+
 if is_enabled "${KILL_SWITCH:-}"; then
-    openvpn_args+=("--route-up" "/usr/local/bin/killswitch.sh $ALLOWED_SUBNETS")
+    openvpn_args+=("--route-up" "/usr/local/bin/killswitch.sh ${KILL_SWITCH:-} ${ALLOWED_SUBNETS:-} $config_file")
 fi
 
 if [[ -n ${AUTH_SECRET:-} ]]; then

@@ -62,7 +62,7 @@ services:
 #### Environment variables
 | Variable | Default (blank is unset) | Description |
 | --- | --- | --- |
-| `ALLOWED_SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. |
+| `ALLOWED_SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. Note: IPv6 is always blocked. |
 | `AUTH_SECRET` | | Docker secret that contains the credentials for accessing the VPN. |
 | `CONFIG_FILE` | | The OpenVPN configuration file or search pattern. If unset, a random `.conf` or `.ovpn` file will be selected. |
 | `KILL_SWITCH` | `on` | Whether or not to enable the kill switch. Set to any "truthy" value[1] to enable. |
@@ -77,6 +77,8 @@ Regardless of whether or not you're using the kill switch, the entrypoint script
 ##### `AUTH_SECRET`
 Compose has support for [Docker secrets](https://docs.docker.com/engine/swarm/secrets/#use-secrets-in-compose).
 See the [Compose file](docker-compose.yml) in this repository for example usage of passing proxy credentials as Docker secrets.
+
+
 
 ### Using with other containers
 Once you have your `openvpn-client` container up and running, you can tell other containers to use `openvpn-client`'s network stack which gives them the ability to utilize the VPN tunnel.
@@ -102,7 +104,7 @@ In both cases, replace `<host_port>` and `<container_port>` with the port used b
 ### Verifying functionality
 Once you have container running `ghcr.io/wfg/openvpn-client`, run the following command to spin up a temporary container using `openvpn-client` for networking.
 The `wget -qO - ifconfig.me` bit will return the public IP of the container (and anything else using `openvpn-client` for networking).
-You should see an IP address owned by your VPN provider.
+You should see an IP address owned by your VPN provider. Note that the container's health check currently only verifies IPv4 connectivity.
 ```
 docker run --rm -it --network=container:openvpn-client alpine wget -qO - ifconfig.me
 ```

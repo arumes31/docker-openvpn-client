@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+# Healthcheck script for WAN IP verification
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+# Only proceed if KILL_IP is set
+if [[ -z "${KILL_IP:-}" ]]; then
+    echo "HEALTHCHECK: KILL_IP not set. Skipping WAN IP check."
+    exit 0 # Healthy if KILL_IP is not configured
+fi
+
+current_wan_ip=$(curl -s https://icanhazip.com/)
+
+if [[ "$current_wan_ip" == "$KILL_IP" ]]; then
+    echo "HEALTHCHECK: WAN IP ($current_wan_ip) matches KILL_IP ($KILL_IP). Unhealthy."
+    exit 1 # Unhealthy
+else
+    echo "HEALTHCHECK: WAN IP ($current_wan_ip) does not match KILL_IP ($KILL_IP). Healthy."
+    exit 0 # Healthy
+fi
