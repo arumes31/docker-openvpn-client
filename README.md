@@ -1,6 +1,8 @@
 # OpenVPN Client for Docker
 
-Archived in favor of [a WireGuard version](https://github.com/wfg/docker-wireguard).
+Fork of https://github.com/wfg/docker-openvpn-client/pkgs/container/openvpn-client
+
+Updated to latest alpine 
 
 ## What is this and what does it do?
 [`ghcr.io/wfg/openvpn-client`](https://github.com/users/wfg/packages/container/package/openvpn-client) is a containerized OpenVPN client.
@@ -21,12 +23,7 @@ You can either pull it from GitHub Container Registry or build it yourself.
 
 To pull it from GitHub Container Registry, run
 ```
-docker pull ghcr.io/wfg/openvpn-client
-```
-
-To build it yourself, run
-```
-docker build -t ghcr.io/wfg/openvpn-client https://github.com/wfg/docker-openvpn-client.git#:build
+docker pull registry.reitetschlaeger.com/openvpn-client:latest
 ```
 
 ### Creating and running a container
@@ -66,6 +63,7 @@ services:
 | `AUTH_SECRET` | | Docker secret that contains the credentials for accessing the VPN. |
 | `CONFIG_FILE` | | The OpenVPN configuration file or search pattern. If unset, a random `.conf` or `.ovpn` file will be selected. |
 | `KILL_SWITCH` | `on` | Whether or not to enable the kill switch. Set to any "truthy" value[1] to enable. |
+| `KILL_IP` | `` | Set to IP eg "1.1.1.1" - Fail if IP matches - Unset is disabled |
 
 [1] "Truthy" values in this context are the following: `true`, `t`, `yes`, `y`, `1`, `on`, `enable`, or `enabled`.
 
@@ -78,7 +76,8 @@ Regardless of whether or not you're using the kill switch, the entrypoint script
 Compose has support for [Docker secrets](https://docs.docker.com/engine/swarm/secrets/#use-secrets-in-compose).
 See the [Compose file](docker-compose.yml) in this repository for example usage of passing proxy credentials as Docker secrets.
 
-
+##### `KILL_IP`
+checks container wan ip and fails if ip matches
 
 ### Using with other containers
 Once you have your `openvpn-client` container up and running, you can tell other containers to use `openvpn-client`'s network stack which gives them the ability to utilize the VPN tunnel.
