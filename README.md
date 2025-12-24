@@ -38,14 +38,14 @@ docker run --detach \
   --cap-add=NET_ADMIN \
   --device=/dev/net/tun \
   --volume <path/to/config/dir>:/config \
-  ghcr.io/wfg/openvpn-client
+  registry.reitetschlaeger.com/openvpn-client:latest
 ```
 
 #### `docker-compose`
 ```yaml
 services:
   openvpn-client:
-    image: ghcr.io/wfg/openvpn-client
+    image: registry.reitetschlaeger.com/openvpn-client:latest
     container_name: openvpn-client
     cap_add:
       - NET_ADMIN
