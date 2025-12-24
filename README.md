@@ -101,7 +101,7 @@ ports:
 In both cases, replace `<host_port>` and `<container_port>` with the port used by your connected container.
 
 ### Verifying functionality
-Once you have container running `ghcr.io/wfg/openvpn-client`, run the following command to spin up a temporary container using `openvpn-client` for networking.
+Once you have container running `registry.reitetschlaeger.com/openvpn-client:latest`, run the following command to spin up a temporary container using `openvpn-client` for networking.
 The `wget -qO - ifconfig.me` bit will return the public IP of the container (and anything else using `openvpn-client` for networking).
 You should see an IP address owned by your VPN provider. Note that the container's health check currently only verifies IPv4 connectivity.
 ```
