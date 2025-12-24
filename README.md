@@ -63,7 +63,7 @@ services:
 | `AUTH_SECRET` | | Docker secret that contains the credentials for accessing the VPN. |
 | `CONFIG_FILE` | | The OpenVPN configuration file or search pattern. If unset, a random `.conf` or `.ovpn` file will be selected. |
 | `KILL_SWITCH` | `on` | Whether or not to enable the kill switch. Set to any "truthy" value[1] to enable. |
-| `KILL_IP` | `` | Set to IP eg "1.1.1.1" - Fail if IP matches - Unset is disabled |
+| `KILL_IP` |  | Set to IP eg "1.1.1.1" - Fail if IP matches - Unset is disabled |
 
 [1] "Truthy" values in this context are the following: `true`, `t`, `yes`, `y`, `1`, `on`, `enable`, or `enabled`.
 
