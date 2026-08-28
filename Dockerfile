@@ -6,6 +6,8 @@ RUN apk add --no-cache \
     curl=8.21.0-r0 \
     iproute2=7.0.0-r0 \
     iptables=1.8.13-r0 \
+    libcrypto3=3.5.8-r0 \
+    libssl3=3.5.8-r0 \
     openvpn=2.7.5-r0
 
 COPY entry.sh /usr/local/bin/entry.sh
@@ -21,4 +23,4 @@ ENV KILL_SWITCH=on
 ENTRYPOINT ["entry.sh"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=2 \
-  CMD /usr/local/bin/check_wan_ip_health && pgrep openvpn
+  CMD ["/bin/sh", "-c", "/usr/local/bin/check_wan_ip_health && pgrep openvpn"]
