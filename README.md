@@ -35,9 +35,13 @@ See the below to learn how to have [other containers use `openvpn-client`'s netw
 ```
 docker run --detach \
   --name=openvpn-client \
+  --cap-drop=ALL \
   --cap-add=NET_ADMIN \
+  --security-opt=no-new-privileges:true \
+  --read-only \
+  --tmpfs=/run:size=16m \
   --device=/dev/net/tun \
-  --volume <path/to/config/dir>:/config \
+  --volume <path/to/config/dir>:/data/vpn:ro \
   ghcr.io/arumes31/docker-openvpn-client:latest
 ```
 
@@ -49,10 +53,17 @@ services:
     container_name: openvpn-client
     cap_add:
       - NET_ADMIN
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /run:size=16m
     devices:
       - /dev/net/tun
     volumes:
-      - <path/to/config/dir>:/config
+      - <path/to/config/dir>:/data/vpn:ro
     restart: unless-stopped
 ```
 

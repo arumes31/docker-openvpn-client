@@ -1,0 +1,6 @@
+*.sh text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+check_wan_ip_health text eol=lf
+Dockerfile text eol=lf

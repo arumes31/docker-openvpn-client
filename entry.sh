@@ -4,8 +4,10 @@ set -o nounset
 set -o pipefail
 
 cleanup() {
-    [[ ${openvpn_pid:-} ]] && kill -TERM "$openvpn_pid" 2>/dev/null || true
-    wait "$openvpn_pid" 2>/dev/null || true
+    if [[ -n ${openvpn_pid:-} ]]; then
+        kill -TERM "$openvpn_pid" 2>/dev/null || true
+        wait "$openvpn_pid" 2>/dev/null || true
+    fi
 }
 
 is_enabled() {
@@ -14,9 +16,13 @@ is_enabled() {
 
 # Find config file
 if [[ -n ${VPN_CONFIG_FILE:-} ]]; then
-    mapfile -t candidates < <(find /data/vpn -name "$VPN_CONFIG_FILE" 2>/dev/null | sort)
+    if [[ $VPN_CONFIG_FILE == */* || $VPN_CONFIG_FILE == *\\* ]]; then
+        echo "ERROR: VPN_CONFIG_FILE must be a file name, not a path" >&2
+        exit 1
+    fi
+    mapfile -t candidates < <(find /data/vpn -type f -name "$VPN_CONFIG_FILE" 2>/dev/null | sort)
 else
-    mapfile -t candidates < <(find /data/vpn \( -name '*.ovpn' -o -name '*.conf' \) 2>/dev/null | sort)
+    mapfile -t candidates < <(find /data/vpn -type f \( -name '*.ovpn' -o -name '*.conf' \) 2>/dev/null | sort)
 fi
 
 if [[ ${#candidates[@]} -eq 0 ]]; then
@@ -48,7 +54,9 @@ openvpn_args+=("--data-ciphers" "AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305:AES-2
 openvpn_args+=("--verb" "${VPN_LOG_LEVEL:-3}")
 
 if is_enabled "${KILL_SWITCH:-}"; then
-    openvpn_args+=("--route-up" "/usr/local/bin/killswitch.sh ${KILL_SWITCH:-} ${ALLOWED_SUBNETS:-} $config_file")
+    export KILL_SWITCH ALLOWED_SUBNETS
+    export VPN_CONFIG_PATH="$config_file"
+    openvpn_args+=("--route-up" "/usr/local/bin/killswitch.sh")
 fi
 
 if [[ -n ${AUTH_SECRET:-} ]]; then
@@ -56,12 +64,12 @@ if [[ -n ${AUTH_SECRET:-} ]]; then
     if [[ -f "$auth_path" ]]; then
         openvpn_args+=("--auth-user-pass" "$auth_path")
     else
-        echo "WARNING: AUTH_SECRET specified but file not found: $auth_path" >&2
+        echo "ERROR: AUTH_SECRET was specified but the secret file is unavailable" >&2
+        exit 1
     fi
 fi
 
-# Final safety: print command (helpful for debugging)
-echo "Starting OpenVPN with: openvpn ${openvpn_args[*]}"
+echo "Starting OpenVPN"
 
 openvpn "${openvpn_args[@]}" &
 openvpn_pid=$!
