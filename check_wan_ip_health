@@ -12,7 +12,7 @@ if [[ -z "${KILL_IP:-}" ]]; then
     exit 0 # Healthy if KILL_IP is not configured
 fi
 
-current_wan_ip=$(curl -s https://icanhazip.com/)
+current_wan_ip=$(curl --fail --silent --show-error --max-time 10 https://icanhazip.com/)
 
 if [[ "$current_wan_ip" == "$KILL_IP" ]]; then
     echo "HEALTHCHECK: WAN IP ($current_wan_ip) matches KILL_IP ($KILL_IP). Unhealthy."
