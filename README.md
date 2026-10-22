@@ -37,7 +37,7 @@ docker run --detach \
   --name=openvpn-client \
   --cap-add=NET_ADMIN \
   --device=/dev/net/tun \
-  --volume <path/to/config/dir>:/config \
+  --volume <path/to/config/dir>:/data/vpn \
   ghcr.io/arumes31/docker-openvpn-client:latest
 ```
 
@@ -52,7 +52,7 @@ services:
     devices:
       - /dev/net/tun
     volumes:
-      - <path/to/config/dir>:/config
+      - <path/to/config/dir>:/data/vpn
     restart: unless-stopped
 ```
 
@@ -61,9 +61,13 @@ services:
 | --- | --- | --- |
 | `ALLOWED_SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. Note: IPv6 is always blocked. |
 | `AUTH_SECRET` | | Docker secret that contains the credentials for accessing the VPN. |
-| `CONFIG_FILE` | | The OpenVPN configuration file or search pattern. If unset, a random `.conf` or `.ovpn` file will be selected. |
+| `VPN_CONFIG_FILE` | | The OpenVPN configuration file or search pattern (in `/data/vpn`). If unset, a random `.conf` or `.ovpn` file will be selected. |
 | `KILL_SWITCH` | `on` | Whether or not to enable the kill switch. Set to any "truthy" value[1] to enable. |
 | `KILL_IP` |  | Set to IP eg "1.1.1.1" - Fail if IP matches - Unset is disabled |
+| `ALLOW_CONFIG_SCRIPTS` | `off` | Allow directives in the OpenVPN config that run external programs (`up`, `down`, `route-up`, `tls-verify`, `plugin`, ...). By default such configs are refused. Set to a "truthy" value[1] only for configs you trust. |
+| `VPN_DATA_CIPHERS` | `AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305` | Data channel ciphers offered to the server. Only AEAD ciphers by default; append e.g. `:AES-256-CBC` if your provider still requires CBC. |
+| `VPN_DROP_PRIVILEGES` | `on` | Run OpenVPN as `nobody` once the tunnel is up (`--user nobody --group nobody --persist-tun --persist-key`). Set to `off` if your setup needs root after connecting. |
+| `VPN_LOG_LEVEL` | `3` | OpenVPN `--verb` level. |
 
 [1] "Truthy" values in this context are the following: `true`, `t`, `yes`, `y`, `1`, `on`, `enable`, or `enabled`.
 
@@ -71,6 +75,13 @@ services:
 ###### `ALLOWED_SUBNETS`
 If you intend on connecting to containers that use the OpenVPN container's network stack (which you probably do), **you will probably want to use this variable**.
 Regardless of whether or not you're using the kill switch, the entrypoint script also adds routes to each of the `ALLOWED_SUBNETS` to allow network connectivity from outside of Docker.
+
+###### `KILL_SWITCH`
+The firewall rules are installed *before* OpenVPN starts: outgoing traffic is only allowed over loopback, the tunnel (`tun*`), to the VPN server addresses from the config (hostnames are resolved once at startup and pinned in `/etc/hosts`) and to `ALLOWED_SUBNETS`.
+DNS is only allowed through the tunnel. If the container uses Docker's embedded DNS (`127.0.0.11`, user-defined networks), queries are forwarded by the Docker daemon outside the tunnel; set `dns:` to your VPN provider's resolver to avoid that.
+
+###### `ALLOW_CONFIG_SCRIPTS`
+Many provider configs contain lines such as `up /etc/openvpn/update-resolv-conf`. These run as root in the network namespace shared with your other containers, so they are refused by default and the container exits with an error listing the offending lines. Remove those lines (recommended) or set `ALLOW_CONFIG_SCRIPTS=on`.
 
 ##### `AUTH_SECRET`
 Compose has support for [Docker secrets](https://docs.docker.com/engine/swarm/secrets/#use-secrets-in-compose).

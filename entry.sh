@@ -36,19 +36,47 @@ fi
 
 echo "Using OpenVPN configuration: $config_file"
 
+# OpenVPN directives in the config that execute external programs or load code.
+# They run as root with NET_ADMIN in the network namespace shared with other
+# containers, so they are refused unless explicitly allowed.
+script_directive_regex='^[[:space:]]*(--)?(up|down|route-up|route-pre-down|ipchange|tls-verify|tls-crypt-v2-verify|auth-user-pass-verify|learn-address|client-connect|client-disconnect|plugin|iproute|script-security|config)([[:space:]]|$)'
+
+if is_enabled "${ALLOW_CONFIG_SCRIPTS:-off}"; then
+    echo "WARNING: ALLOW_CONFIG_SCRIPTS is enabled, script directives in $config_file will be executed" >&2
+    script_security=2
+else
+    if script_lines=$(grep -nE "$script_directive_regex" "$config_file"); then
+        echo "ERROR: $config_file contains directives that execute external programs:" >&2
+        echo "$script_lines" >&2
+        echo "   Remove them, or set ALLOW_CONFIG_SCRIPTS=on if you trust this config." >&2
+        exit 1
+    fi
+    script_security=1
+fi
+
 openvpn_args=(
     "--down-pre"
-    "--script-security" "2"
     "--config" "$config_file"
     "--cd" "/data/vpn"
+    "--script-security" "$script_security"
 )
 
-openvpn_args+=("--data-ciphers" "AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305:AES-256-CBC:AES-192-GCM:AES-128-CBC:AES-192-CBC")
+# Only AEAD ciphers by default; set VPN_DATA_CIPHERS if your provider requires CBC
+openvpn_args+=("--data-ciphers" "${VPN_DATA_CIPHERS:-AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305}")
 
 openvpn_args+=("--verb" "${VPN_LOG_LEVEL:-3}")
 
+# Drop root privileges once the tunnel is set up
+if is_enabled "${VPN_DROP_PRIVILEGES:-on}"; then
+    openvpn_args+=("--user" "nobody" "--group" "nobody" "--persist-tun" "--persist-key")
+fi
+
+# Install the kill switch before OpenVPN starts so nothing leaks while connecting
 if is_enabled "${KILL_SWITCH:-}"; then
-    openvpn_args+=("--route-up" "/usr/local/bin/killswitch.sh ${KILL_SWITCH:-} ${ALLOWED_SUBNETS:-} $config_file")
+    /usr/local/bin/killswitch.sh "$config_file"
+else
+    echo "KILL_SWITCH is disabled. Only IPv4 output policy will be ACCEPT."
+    iptables -P OUTPUT ACCEPT
 fi
 
 if [[ -n ${AUTH_SECRET:-} ]]; then
