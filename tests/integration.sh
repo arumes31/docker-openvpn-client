@@ -26,7 +26,7 @@ trap cleanup EXIT
 fail() {
     echo "FAIL: $*" >&2
     for c in "${containers[@]}"; do
-        echo "--- logs of $c ---" >&2
+        echo "--- logs of $c ($(docker inspect -f '{{.State.Status}} exit={{.State.ExitCode}}' "$c" 2>&1)) ---" >&2
         docker logs "$c" >&2 || true
     done
     exit 1
