@@ -41,7 +41,7 @@ configure_ipv4_firewall() {
 add_allowed_subnets_ipv4() {
     local allowed_subnets="$1"
     local default_gateway_ipv4
-    default_gateway_ipv4=$(ip -4 route | awk '$1 == "default" { print $3; exit }')
+    default_gateway_ipv4=$(ip -4 route | awk '$1 == "default" && !found { print $3; found = 1 }')
 
     for subnet in ${allowed_subnets//,/ }; do
         echo "Adding IPv4 allowed subnet: $subnet"
