@@ -2,17 +2,23 @@ name: CI
 
 on:
   workflow_call:
-  push:
-    branches: [master]
+  # No push trigger: "Build and Push to GHCR" runs this workflow as its quality
+  # gate on every push to master, so a direct push run would repeat it.
   pull_request:
     branches: [master]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
 
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel the publish gate on master; only superseded PR runs.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:

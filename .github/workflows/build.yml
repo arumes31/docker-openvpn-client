@@ -6,6 +6,12 @@ on:
       - master
     tags:
       - 'v*'
+    # Path filters are not evaluated for tag pushes, so releases always build.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
   workflow_dispatch:
 
 env:
@@ -26,6 +32,7 @@ jobs:
   build-and-push:
     needs: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     permissions:
       contents: read
