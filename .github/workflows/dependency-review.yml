@@ -3,6 +3,10 @@ name: Dependency Review
 on:
   pull_request:
     branches: [master]
+    # Pinned actions are the only dependencies the review action understands.
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
 
 permissions:
   contents: read
