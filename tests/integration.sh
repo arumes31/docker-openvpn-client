@@ -89,7 +89,7 @@ docker wait "$c" >/dev/null
 docker logs "$c" 2>&1 | grep -q 'directives that execute external programs' || fail "missing refusal message"
 
 echo "== Configs loading native modules are refused"
-for directive in "providers /tmp/evil.so" "providers legacy ../evil" "pkcs11-providers /tmp/evil.so" "engine dynamic"; do
+for directive in "providers /tmp/evil.so" "providers legacy ../evil" "pkcs11-providers /tmp/evil.so" "engine dynamic" '"engine" dynamic' "en\gine dynamic" "setenv opt providers /tmp/evil.so" "setenv opt plugin /tmp/evil.so"; do
     write_config "$directive"
     run_container
     docker wait "$c" >/dev/null

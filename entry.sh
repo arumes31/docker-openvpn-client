@@ -52,7 +52,11 @@ if is_enabled "${ALLOW_CONFIG_SCRIPTS:-off}"; then
     echo "WARNING: ALLOW_CONFIG_SCRIPTS is enabled, script directives in $config_file will be executed" >&2
     script_security=2
 else
-    if script_lines=$(grep -nE "$script_directive_regex" "$config_file"); then
+    # Match what OpenVPN parses, not the raw text: it accepts quoted or
+    # backslash-escaped option names and 'setenv opt <option>' prefixes.
+    # Dropping quotes/backslashes can only cause extra refusals, never misses.
+    normalized_config=$(tr -d "\"'\\\\" < "$config_file" | sed -E 's/^([[:space:]]*(--)?setenv[[:space:]]+opt[[:space:]]+)+//')
+    if script_lines=$(grep -nE "$script_directive_regex" <<< "$normalized_config"); then
         echo "ERROR: $config_file contains directives that execute external programs:" >&2
         echo "$script_lines" >&2
         echo "   Remove them, or set ALLOW_CONFIG_SCRIPTS=on if you trust this config." >&2
@@ -61,7 +65,7 @@ else
     # 'providers' may name only OpenSSL's built-in providers; any other name or
     # path makes OpenSSL load a native module into the root process.
     builtin_providers_regex='^[^:]*:[[:space:]]*(--)?providers([[:space:]]+(legacy|default|base|fips|null))*[[:space:]]*([#;].*)?$'
-    if provider_lines=$(grep -nE '^[[:space:]]*(--)?providers([[:space:]]|$)' "$config_file" | grep -vE "$builtin_providers_regex"); then
+    if provider_lines=$(grep -nE '^[[:space:]]*(--)?providers([[:space:]]|$)' <<< "$normalized_config" | grep -vE "$builtin_providers_regex"); then
         echo "ERROR: $config_file contains directives that execute external programs (non built-in OpenSSL providers):" >&2
         echo "$provider_lines" >&2
         echo "   Remove them, or set ALLOW_CONFIG_SCRIPTS=on if you trust this config." >&2

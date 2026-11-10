@@ -2,7 +2,7 @@ name: OpenRabbit Reviewer
 
 on:
   pull_request:
-    types: [opened, reopened, edited, synchronize]
+    types: [opened, reopened, edited, synchronize, ready_for_review]
 
 permissions:
   contents: read
