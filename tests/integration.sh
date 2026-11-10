@@ -88,6 +88,22 @@ docker wait "$c" >/dev/null
 [[ $(docker inspect -f '{{.State.ExitCode}}' "$c") != 0 ]] || fail "config with 'up' was accepted"
 docker logs "$c" 2>&1 | grep -q 'directives that execute external programs' || fail "missing refusal message"
 
+echo "== Configs loading native modules are refused"
+for directive in "providers /tmp/evil.so" "providers legacy ../evil" "pkcs11-providers /tmp/evil.so" "engine dynamic" '"engine" dynamic' "en\gine dynamic" "setenv opt providers /tmp/evil.so" "setenv opt plugin /tmp/evil.so"; do
+    write_config "$directive"
+    run_container
+    docker wait "$c" >/dev/null
+    [[ $(docker inspect -f '{{.State.ExitCode}}' "$c") != 0 ]] || fail "config with '$directive' was accepted"
+    docker logs "$c" 2>&1 | grep -q 'directives that execute external programs' || fail "missing refusal message for '$directive'"
+done
+
+echo "== VPN_CONFIG_FILE must name a config file"
+write_config ""
+run_container --env VPN_CONFIG_FILE=creds.txt
+docker wait "$c" >/dev/null
+[[ $(docker inspect -f '{{.State.ExitCode}}' "$c") != 0 ]] || fail "non-config VPN_CONFIG_FILE was accepted"
+docker logs "$c" 2>&1 | grep -q 'VPN_CONFIG_FILE must name' || fail "missing VPN_CONFIG_FILE refusal message"
+
 echo "== ALLOW_CONFIG_SCRIPTS opts back in"
 run_container --env ALLOW_CONFIG_SCRIPTS=on
 sleep 5

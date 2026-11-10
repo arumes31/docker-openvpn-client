@@ -2,7 +2,7 @@ name: OpenRabbit Reviewer
 
 on:
   pull_request:
-    types: [opened, reopened, edited, synchronize]
+    types: [opened, reopened, edited, synchronize, ready_for_review]
 
 permissions:
   contents: read
@@ -14,6 +14,8 @@ concurrency:
 jobs:
   review:
     name: OpenRabbit (advisory)
+    # Same-repository, non-draft PRs only: fork safety must not rely on secrets being withheld.
+    if: github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft
     permissions:
       contents: read
       # Required only for posting COMMENT reviews and inline suggestions via the API.
