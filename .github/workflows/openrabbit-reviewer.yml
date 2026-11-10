@@ -15,8 +15,9 @@ concurrency:
 jobs:
   review:
     name: OpenRabbit (advisory)
-    # Skip Dependabot bumps, drafts and title/body-only edits (base-branch changes still review).
-    if: github.event.pull_request.user.login != 'dependabot[bot]' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base)
+    # Same-repository, non-draft, non-Dependabot PRs only (fork safety must not rely on
+    # secrets being withheld); title/body-only edits skip, base-branch changes still review.
+    if: github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && github.event.pull_request.user.login != 'dependabot[bot]' && (github.event.action != 'edited' || github.event.changes.base)
     permissions:
       contents: read
       # Required only for posting COMMENT reviews and inline suggestions via the API.

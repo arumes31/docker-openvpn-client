@@ -61,7 +61,7 @@ services:
 | --- | --- | --- |
 | `ALLOWED_SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. Note: IPv6 is always blocked. |
 | `AUTH_SECRET` | | Docker secret that contains the credentials for accessing the VPN. |
-| `VPN_CONFIG_FILE` | | The OpenVPN configuration file or search pattern (in `/data/vpn`). If unset, a random `.conf` or `.ovpn` file will be selected. |
+| `VPN_CONFIG_FILE` | | The OpenVPN configuration file or search pattern (in `/data/vpn`); it must end in `.ovpn` or `.conf`. If unset, a random `.conf` or `.ovpn` file will be selected. |
 | `KILL_SWITCH` | `on` | Whether or not to enable the kill switch. Set to any "truthy" value[1] to enable. |
 | `KILL_IP` |  | Set to IP eg "1.1.1.1" - Fail if IP matches - Unset is disabled |
 | `ALLOW_CONFIG_SCRIPTS` | `off` | Allow directives in the OpenVPN config that run external programs (`up`, `down`, `route-up`, `tls-verify`, `plugin`, ...). By default such configs are refused. Set to a "truthy" value[1] only for configs you trust. |
@@ -78,10 +78,10 @@ Regardless of whether or not you're using the kill switch, the entrypoint script
 
 ###### `KILL_SWITCH`
 The firewall rules are installed *before* OpenVPN starts: outgoing traffic is only allowed over loopback, the tunnel (`tun*`), to the VPN server addresses from the config (hostnames are resolved once at startup and pinned in `/etc/hosts`) and to `ALLOWED_SUBNETS`.
-DNS is only allowed through the tunnel. If the container uses Docker's embedded DNS (`127.0.0.11`, user-defined networks), queries are forwarded by the Docker daemon outside the tunnel; set `dns:` to your VPN provider's resolver to avoid that.
+Direct DNS queries (port 53) are only allowed through the tunnel. Loopback stays open, though: if the container uses Docker's embedded DNS (`127.0.0.11`, user-defined networks), queries are forwarded by the Docker daemon outside the tunnel; set `dns:` to your VPN provider's resolver to avoid that.
 
 ###### `ALLOW_CONFIG_SCRIPTS`
-Many provider configs contain lines such as `up /etc/openvpn/update-resolv-conf`. These run as root in the network namespace shared with your other containers, so they are refused by default and the container exits with an error listing the offending lines. Remove those lines (recommended) or set `ALLOW_CONFIG_SCRIPTS=on`.
+Many provider configs contain lines such as `up /etc/openvpn/update-resolv-conf`. These run as root in the network namespace shared with your other containers, so they are refused by default (as are `plugin`, `pkcs11-providers`, `engine` and `providers` other than OpenSSL's built-in `legacy`/`default`/`base`/`fips`/`null`, which load native modules) and the container exits with an error listing the offending lines. Remove those lines (recommended) or set `ALLOW_CONFIG_SCRIPTS=on`.
 
 ##### `AUTH_SECRET`
 Compose has support for [Docker secrets](https://docs.docker.com/engine/swarm/secrets/#use-secrets-in-compose).
