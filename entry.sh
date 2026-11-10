@@ -14,6 +14,11 @@ is_enabled() {
 
 # Find config file
 if [[ -n ${VPN_CONFIG_FILE:-} ]]; then
+    # Only config files may be selected, never e.g. a credentials file
+    if [[ $VPN_CONFIG_FILE != *.ovpn && $VPN_CONFIG_FILE != *.conf ]]; then
+        echo "ERROR: VPN_CONFIG_FILE must name a *.ovpn or *.conf file: $VPN_CONFIG_FILE" >&2
+        exit 1
+    fi
     mapfile -t candidates < <(find /data/vpn -name "$VPN_CONFIG_FILE" 2>/dev/null | sort)
 else
     mapfile -t candidates < <(find /data/vpn \( -name '*.ovpn' -o -name '*.conf' \) 2>/dev/null | sort)
@@ -36,10 +41,12 @@ fi
 
 echo "Using OpenVPN configuration: $config_file"
 
-# OpenVPN directives in the config that execute external programs or load code.
+# OpenVPN directives in the config that execute external programs or load code
+# (plugin, pkcs11-providers and engine dlopen native modules; providers is
+# checked separately below so the built-in OpenSSL providers stay usable).
 # They run as root with NET_ADMIN in the network namespace shared with other
 # containers, so they are refused unless explicitly allowed.
-script_directive_regex='^[[:space:]]*(--)?(up|down|route-up|route-pre-down|ipchange|tls-verify|tls-crypt-v2-verify|auth-user-pass-verify|learn-address|client-connect|client-disconnect|plugin|iproute|script-security|config)([[:space:]]|$)'
+script_directive_regex='^[[:space:]]*(--)?(up|down|route-up|route-pre-down|ipchange|tls-verify|tls-crypt-v2-verify|auth-user-pass-verify|learn-address|client-connect|client-disconnect|plugin|pkcs11-providers|engine|iproute|script-security|config)([[:space:]]|$)'
 
 if is_enabled "${ALLOW_CONFIG_SCRIPTS:-off}"; then
     echo "WARNING: ALLOW_CONFIG_SCRIPTS is enabled, script directives in $config_file will be executed" >&2
@@ -48,6 +55,15 @@ else
     if script_lines=$(grep -nE "$script_directive_regex" "$config_file"); then
         echo "ERROR: $config_file contains directives that execute external programs:" >&2
         echo "$script_lines" >&2
+        echo "   Remove them, or set ALLOW_CONFIG_SCRIPTS=on if you trust this config." >&2
+        exit 1
+    fi
+    # 'providers' may name only OpenSSL's built-in providers; any other name or
+    # path makes OpenSSL load a native module into the root process.
+    builtin_providers_regex='^[^:]*:[[:space:]]*(--)?providers([[:space:]]+(legacy|default|base|fips|null))*[[:space:]]*([#;].*)?$'
+    if provider_lines=$(grep -nE '^[[:space:]]*(--)?providers([[:space:]]|$)' "$config_file" | grep -vE "$builtin_providers_regex"); then
+        echo "ERROR: $config_file contains directives that execute external programs (non built-in OpenSSL providers):" >&2
+        echo "$provider_lines" >&2
         echo "   Remove them, or set ALLOW_CONFIG_SCRIPTS=on if you trust this config." >&2
         exit 1
     fi
